@@ -1,6 +1,6 @@
 ---
 title:  "一加11(PHB110)刷机和Root指南"
-last_modified_at: 2023-10-28T00:00:00+00:00
+last_modified_at: 2023-11-07T00:00:00+00:00
 categories:
   - hardware
 tags: linux android
@@ -49,6 +49,10 @@ toc: true
 为了避免参数丢失不得不换主板的悲剧，在进行任何操作前必须备份全部分区。
 目前，可使用**欧加真9008工具**一键备份（需要安装9008驱动）。
 
+特别的，在进行root时需要对boot分区进行修补，故需要频繁对boot分区进行备份。
+通过比较OTA和OFP包可发现，同样的版本下，不同打包方式中的boot镜像是相同的。
+另外，在未修改boot分区时，备份得到的镜像与刷机包中的一致。
+
 ## 刷入OOS
 
 由于COS和OOS中比较大的分区变动[^JimmyTian1]，刷机过程比较复杂，主要流程如下[^jarodlau1]：
@@ -93,10 +97,56 @@ toc: true
 7. fastboot flashing lock
 8. fastboot reboot
 
+经测试，在回锁后，系统能够正常增加更新。（在Root后无法OTA更新[^community1]）
+
 刷入my_preload分区：
 
 由于该分区存放的是预装应用等内容，不需要在OTA中更新，故在上述刷写过程中不会被覆盖[^c540690p1]。
 因此，需要从**OFP**包中提取并刷入[^jarodlau2]
+
+## root(KernelSU)
+
+[KernelSU](https://github.com/tiann/KernelSU)是一种新的root方式（对内核进行修改），隐蔽性更高，但操作也更复杂。
+对于一加11的原版ROM，目前均已有现成的内核修补包供直接刷入（不压缩）；
+但是如果刷了第三方系统，则可能需要手动编译内核。
+
+在刷入前，可以通过如下指令尝试启动：
+
+```shell
+fastboot boot boot.img
+```
+
+确认能够启动后，再实际刷入：
+
+```shell
+fastboot flash boot boot.img
+```
+
+KernelSU在模块接口方面尽可能地与[Magisk](https://github.com/topjohnwu/Magisk)保持一致，并提供了额外的功能。
+另外，对于Magisk的**Zygisk**功能，通过[Zygisk Next](https://github.com/Dr-TSNG/ZygiskNext)模块实现了支持。
+
+在**需要**时可以给**shell**添加root，这样就能通过`adb shell`执行root脚本。
+
+## Xposed框架(LSPosed)
+
+[LSPosed](https://github.com/LSPosed/LSPosed.github.io)是一个基于Xposed框架的[^xposed]安卓应用hook模块，目前已支持到安卓14。
+LSPosed虽然以模块的形式刷入，但自身又是一个强大的框架，搭载了大量的Xposed模块。
+通过Xposed框架定义的一套hook接口，Xposed模块的开发者可以不需要适配安卓底层的改动，应用的兼容性得到显著提升。
+
+### SSLUnpinning
+
+随着安卓的更新，对应用的抓包（MITM攻击）变得越来越困难，这一方面体现在证书的安装上[^mitmproxy1]，另一方面体现在应用的自保护上。
+[SSLUnpinning](https://github.com/Xposed-Modules-Repo/io.github.tehcneko.sslunpinning)通过绕过应用的CA证书有效性检测的方式，实现了对大部分应用的抓包。
+
+## ROM提取
+
+卡刷（OTA）包是单个bin文件，需要先将其解包，可使用[payload-dumper-go](https://github.com/ssut/payload-dumper-go)。
+
+线刷（OFP）包是按分区分割的img文件，格式为**Android sparse image**，需先使用[simg2img](https://github.com/anestisb/android-simg2img)将其转换为正常的img文件，然后挂载到linux系统中读取。
+
+一加的内置系统应用在分区`my_stock`中。
+其中，`我的一加`软件在文件夹`KeKeUserCenter`中，在COS中包名为`com.heytap.vip`，在OOS中包名为`com.oneplus.account`，两者并不能覆盖安装。
+其它的一加服务都依赖于上述软件，因此提取系统应用并没有什么意义。
 
 ## Reference
 
@@ -111,3 +161,9 @@ toc: true
 [^c540690p1]: 关于为什么刷完氧OS13还是有一堆内置国行app这件事, [url](https://www.coolapk.com/feed/43883313?shareKey=ZWY5ZTBmZWUxMmFlNjUzZDJjOTE~)
 
 [^jarodlau2]: 一加11 出厂cos完美刷入oos的教程, [url](https://www.coolapk.com/feed/43732413?shareKey=YTY4ZjExMTRjZjA2NjUzZDJkYjk~)
+
+[^community1]: All about OxygenOS - September 2023, [url](https://community.oneplus.com/thread/1428579350231384065)
+
+[^xposed]: Xposed - General info, versions & changelog, [url](https://xdaforums.com/t/xposed-general-info-versions-changelog.2714053/)
+
+[^mitmproxy1]: Install System CA Certificate on Android Emulator, [url](https://docs.mitmproxy.org/stable/howto-install-system-trusted-ca-android/)
