@@ -1,6 +1,6 @@
 ---
 title:  "一加11(PHB110)刷机和Root指南"
-last_modified_at: 2023-11-07T00:00:00+00:00
+last_modified_at: 2023-12-05T00:00:00+00:00
 categories:
   - hardware
 tags: linux android
@@ -132,6 +132,12 @@ KernelSU在模块接口方面尽可能地与[Magisk](https://github.com/topjohnw
 [LSPosed](https://github.com/LSPosed/LSPosed.github.io)是一个基于Xposed框架的[^xposed]安卓应用hook模块，目前已支持到安卓14。
 LSPosed虽然以模块的形式刷入，但自身又是一个强大的框架，搭载了大量的Xposed模块。
 通过Xposed框架定义的一套hook接口，Xposed模块的开发者可以不需要适配安卓底层的改动，应用的兼容性得到显著提升。
+
+### CallRecording
+
+该[应用](https://github.com/vvb2060/CallRecording)解决了原生拨号器无法录音的问题：
+1. 将`CountryCode`修改为可录音的区域。
+2. 跳过开启录音时的提示音（根据拨号器版本分为2种方式）
 
 ### SSLUnpinning
 
