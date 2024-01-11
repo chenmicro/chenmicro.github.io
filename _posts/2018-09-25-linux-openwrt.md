@@ -1,6 +1,6 @@
 ---
 title:  "Openwrt配置说明"
-last_modified_at: 2023-03-02T00:00:00+00:00
+last_modified_at: 2024-01-11T00:00:00+00:00
 categories:
   - hardware
 tags: linux router openwrt
@@ -269,6 +269,39 @@ OpenWrt官网的文档：[点我](https://openwrt.org/docs/guide-user/services/v
         list network 'ovpn0'
     ```
 
+**分配ipv6地址**
+
+上述配置只能够为客户端分配ipv4地址，如果需要实现ipv6访问，则需要进行额外的修改。
+
+* 首先，需要修改接口配置，这里为`ovpn0`：
+
+    ```wiki
+    config interface 'ovpn0'
+        # 切换为静态协议
+        option proto 'static'
+        # 上面服务器配置中的接口名称
+        option ifname 'tun0'
+        # 为该接口获取一个ipv6子网
+        option ip6assign '64'
+        # 过滤得到的子网 这里我们使用了NAT6 故选择Local ULA对应的子网
+        list ip6class 'local'
+    ```
+  
+  如果路由器获得的ipv6非固定（正常家宽的情况），则需要添加更新脚本[^openwrt1]。
+
+* 然后，需要在服务器配置文件中添加ipv6相关内容[^openvpn1]：
+    
+    ```wiki
+    # 服务器ipv6子网
+    server-ipv6 2001:db8:0:123::/64
+    # 推送服务器LAN的路由
+    push "route-ipv6 2001:db8:0:abc::/64"
+    # 推送Internet的路由
+    push "route-ipv6 2000::/3"
+    ```
+
+  如果路由器获得的ipv6非固定，需要添加脚本自动修改配置文件中的`server-ipv6`内容。
+
 ### 在旁路由运行Server
 
 同样按照上述过程操作，并且在主路由中添加端口转发，不出意外的话客户端能够成功连接了。
@@ -351,4 +384,8 @@ cat /proc/net/nf_conntrack
 openssl speed -evp AES-128-GCM
 ```
 
+## Reference
 
+[^openwrt1]: OpenVPN server with dynamic IPv6 GUA prefix, [url](https://openwrt.org/docs/guide-user/services/vpn/openvpn/server_ip6prefix)
+
+[^openvpn1]: IPv6 in OpenVPN, [url](https://community.openvpn.net/openvpn/wiki/IPv6)
