@@ -1,6 +1,6 @@
 ---
 title:  "Openwrt配置说明"
-last_modified_at: 2024-01-11T00:00:00+00:00
+last_modified_at: 2024-01-22T00:00:00+00:00
 categories:
   - hardware
 tags: linux router openwrt
@@ -13,7 +13,7 @@ Model: Newifi-D2
 
 Architecture: MediaTek MT7621 ver:1 eco:3
 
-Firmware Version: OpenWrt 22.03.3
+Firmware Version: OpenWrt 23.05.2
 
 
 # 1 系统配置
@@ -350,6 +350,8 @@ nobind
 <key></key>
 ```
 
+如果在Windows系统上连接后仍使用本地DNS，可能是因为该连接的默认跳数太高，降低了优先级[^openvpn2]。
+
 ### 在路由器运行Client
 
 在OpenWrt中使用客户端文件连接远程服务器，可以参照server中的步骤，用同样的方式建立一个接口`tun0`，并设定防火墙规则为`wan`，然后将配置文件中的适配器指定为`tun0`。
@@ -389,3 +391,5 @@ openssl speed -evp AES-128-GCM
 [^openwrt1]: OpenVPN server with dynamic IPv6 GUA prefix, [url](https://openwrt.org/docs/guide-user/services/vpn/openvpn/server_ip6prefix)
 
 [^openvpn1]: IPv6 in OpenVPN, [url](https://community.openvpn.net/openvpn/wiki/IPv6)
+
+[^openvpn2]: 为什么我的 DNS 查询没有转发到 Client VPN 端点上设置的 DNS 服务器？, [url](https://repost.aws/zh-Hans/knowledge-center/client-vpn-fix-dns-query-forwarding)
