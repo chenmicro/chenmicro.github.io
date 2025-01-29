@@ -1,6 +1,6 @@
 ---
 title:  "一加11(PHB110)刷机和Root指南"
-last_modified_at: 2023-12-05T00:00:00+00:00
+last_modified_at: 2025-01-29T00:00:00+00:00
 categories:
   - hardware
 tags: linux android
@@ -53,9 +53,7 @@ toc: true
 通过比较OTA和OFP包可发现，同样的版本下，不同打包方式中的boot镜像是相同的。
 另外，在未修改boot分区时，备份得到的镜像与刷机包中的一致。
 
-## 刷入OOS
-
-由于COS和OOS中比较大的分区变动[^JimmyTian1]，刷机过程比较复杂，主要流程如下[^jarodlau1]：
+## 解锁/回锁bootloader
 
 解锁bootloader：
 
@@ -65,62 +63,73 @@ toc: true
 4. adb reboot-bootloader
 5. 进入 fastboot
 6. fastboot flashing unlock
-7. adb reboot-bootloader
-
-刷入系统：
-
-1. 下载CPH2449 GLO A.10
-2. 打开Fastboot Enhance
-3. 确认勾选"Ignore Unknown Partition"
-4. 确认 fastbootd is NO
-5. Flash payload.bin
-6. 选择 boot into fastbootd
-7. 打开 Fastboot Enhance
-8. 再三确认"Ignore Unknown Partition"
-9. 确认 fastbootd is YES
-10. Flash payload.bin
-11. 下载解压 ocdt_CPH2449.img
-12. 进入fastboot
-13. fastboot flash ocdt ocdt_CPH2449.img
-14. Fastboot reboot
 
 回锁bootloader：
 
 这里要注意不能在初始化阶段设置密码[^daxiaamu1]，并且不要在修改boot分区后回锁[^daxiaamu2]。
 
-1. 进入OxygenOS, 跳过所有选项. 不要设置pin密码（此过程最好不要插卡）。 🈶科学环境的话，无所谓。
+1. 进入OxygenOS, 跳过所有选项. 不要设置pin密码（如果不能正常联网，此过程最好不要插卡）。
 2. 打开 developer mode开发者模式
 3. 打开 USB Debug usb调试
 4. 打开OEM-unlock
-5. adb reboot-bootloader
-6. 进入fastboot模式
-7. fastboot flashing lock
-8. fastboot reboot
+5. 进入fastboot模式 `adb reboot-bootloader`
+6. `fastboot flashing lock`
+7. `fastboot reboot`
 
 经测试，在回锁后，系统能够正常增加更新。（在Root后无法OTA更新[^community1]）
+
+## COS13刷入OOS13
+
+由于COS和OOS中比较大的分区变动[^JimmyTian1]，刷机过程比较复杂，主要流程如下[^jarodlau1]：
+
+刷入系统（使用刷机包`CPH2449 GLO A.10`）：
+
+1. 在`fastboot`中刷入`payload.bin`中的部分分区
+   1. 打开Fastboot Enhance
+   2. 确认勾选 **Ignore Unknown Partition**
+   3. 确认 **fastbootd is NO**
+   4. Flash payload.bin
+2. 在`fastbootd`中刷入`payload.bin`中的剩余分区
+   1. 选择 boot into fastbootd
+   2. 打开 Fastboot Enhance
+   3. 再三确认 **Ignore Unknown Partition**
+   4. 确认 **fastbootd is YES**
+   5. Flash payload.bin
+3. 在`fastboot`中刷入修补过的本机ocdt（从OOS14开始，直接刷入别人的ocdt会无法进入fastboot）[^kpgc10kai]
+4. 重启设备
 
 刷入my_preload分区：
 
 由于该分区存放的是预装应用等内容，不需要在OTA中更新，故在上述刷写过程中不会被覆盖[^c540690p1]。
 因此，需要从**OFP**包中提取并刷入[^jarodlau2]
 
+## OOS13升级OOS15
+
+**在升级前必须使用自己（或修补过）的ocdt**，如果不幸无法进入`fastboot`，可以在`fastbootd`刷回旧版本的abl分区[^JamirYusup]
+
+adb直接进入fastbootd：`adb wait-for-device reboot fastboot`
+
+OOS13是可以OTA升级OOS14的(CPH2449_14.0.0.304(EX01))，但是升级后无法通过OTA升级到后续版本，断网选择本地安装时会提示dm-verity错误，这时需要在root后通过shell开启dm-verity[^omernart]。这里必须使用KSU的LKM模式或Magisk进行root，因为从该版本起的GKI内核有问题[^UranusNo7]：
+
+```shell
+su
+resetprop ro.boot.veritymode enforcing
+```
+
+在开启后即可正常本地安装（升级后需要重新开启），在升级最新版本时最好将ab分区都更新，以防出问题时手机无法启动。
+
 ## root(KernelSU)
 
 [KernelSU](https://github.com/tiann/KernelSU)是一种新的root方式（对内核进行修改），隐蔽性更高，但操作也更复杂。
-对于一加11的原版ROM，目前均已有现成的内核修补包供直接刷入（不压缩）；
-但是如果刷了第三方系统，则可能需要手动编译内核。
+
+对于一加11的OOS13原版ROM，目前均已有现成的内核修补包供直接刷入（不压缩）；
+对于后续版本，必须使用LKM模式，这种模式的操作步骤和Magisk类似：
 
 在刷入前，可以通过如下指令尝试启动：
 
-```shell
-fastboot boot boot.img
-```
-
-确认能够启动后，再实际刷入：
-
-```shell
-fastboot flash boot boot.img
-```
+1. 在刷机包中提取`init_boot`，~~或者通过高通EDL取回分区~~（OOS15版本暂无有效的引导）
+2. 在管理器中修补分区
+3. 在`fastboot`中刷入修补后的分区
 
 KernelSU在模块接口方面尽可能地与[Magisk](https://github.com/topjohnwu/Magisk)保持一致，并提供了额外的功能。
 另外，对于Magisk的**Zygisk**功能，通过[Zygisk Next](https://github.com/Dr-TSNG/ZygiskNext)模块实现了支持。
@@ -156,19 +165,27 @@ LSPosed虽然以模块的形式刷入，但自身又是一个强大的框架，�
 
 ## Reference
 
+[^daxiaamu1]: 一加11解锁后无法设置锁屏密码的处理方法：100%成功, [url](https://www.daxiaamu.com/7601)
+
+[^daxiaamu2]: ROOT后上锁无法重新解锁, [url](https://www.daxiaamu.com/7694)
+
+[^community1]: All about OxygenOS - September 2023, [url](https://community.oneplus.com/thread/1428579350231384065)
+
 [^JimmyTian1]: 或许是色刷氧后奇怪问题的解决方法, [url](https://www.coolapk.com/feed/45800982?shareKey=MGZkZjgxZjQ3NjVhNjUzZDI4ZmE~)
 
 [^jarodlau1]: 应该是目前为止最完美的刷入, [url](https://www.coolapk.com/feed/47110139?shareKey=ZjdjNWE0ODNmZTRhNjUzZDI4ZDI~)
 
-[^daxiaamu1]: 一加11解锁后无法设置锁屏密码的处理方法：100%成功, [url](https://www.daxiaamu.com/7601)
-
-[^daxiaamu2]: ROOT后上锁无法重新解锁, [url](https://www.daxiaamu.com/7694)
+[^kpgc10kai]: "Maybe a proper way to fix issues after converting Color to Oxygen", [url](https://xdaforums.com/t/maybe-a-proper-way-to-fix-issues-after-converting-color-to-oxygen.4583321/page-7#post-89667529)
 
 [^c540690p1]: 关于为什么刷完氧OS13还是有一堆内置国行app这件事, [url](https://www.coolapk.com/feed/43883313?shareKey=ZWY5ZTBmZWUxMmFlNjUzZDJjOTE~)
 
 [^jarodlau2]: 一加11 出厂cos完美刷入oos的教程, [url](https://www.coolapk.com/feed/43732413?shareKey=YTY4ZjExMTRjZjA2NjUzZDJkYjk~)
 
-[^community1]: All about OxygenOS - September 2023, [url](https://community.oneplus.com/thread/1428579350231384065)
+[^JamirYusup]: "OnePlus 11 will not boot into fastboot.", [url](https://xdaforums.com/t/oneplus-11-will-not-boot-into-fastboot.4651415/post-89359518)
+
+[^omernart]: "dm-verity is disable when doing a Local Install", [url](https://xdaforums.com/t/dm-verity-is-disable-when-doing-a-local-install.4689023/post-89682381)
+
+[^UranusNo7]: "使用fastboot刷入android12-5.10.168_2023-05-boot.img无限重启", [url](https://github.com/tiann/KernelSU/issues/1051)
 
 [^xposed]: Xposed - General info, versions & changelog, [url](https://xdaforums.com/t/xposed-general-info-versions-changelog.2714053/)
 
