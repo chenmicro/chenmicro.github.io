@@ -72,20 +72,20 @@ plugins:
 author:
   name   : "Qianhuang Chen"
   avatar : "/assets/images/bio-photo.jpg"
-  bio    : "Ph.D. Candidate at Southeast University"
+  bio    : "Ph.D. Graduate in Mechanical Engineering (Southeast University) | Nanotechnology & Network Systems Specialist"
   location : "Nanjing, China"
-  email: "qh_chen@outlook.com"
-  linkedin: "qh-chen"
+  email: "qhchen7@outlook.com"
+  linkedin: "qhchen7"
   github: "chenmicro"
   links:
-    - label: "Website"
-      icon: "fas fa-fw fa-link"
-      url: "https://chenmicro.github.io/"
+    - label: "Codeforces"
+      icon: "fas fa-chart-simple"
+      url: "https://codeforces.com/profile/chenmicro"
 footer:
   links:
     - label: "Linkedin"
       icon: "fab fa-fw fa-linkedin"
-      url: "https://www.linkedin.com/in/qh-chen/"
+      url: "https://www.linkedin.com/in/qhchen7/"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/chenmicro/"
